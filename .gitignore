@@ -1,0 +1,25 @@
+# сборка
+build-qmake/
+build/
+*.obj
+*.res
+*.user
+
+# упаковка
+dist/
+
+# генерируется сборкой установщика
+installer/payload.rc
+installer/payload_index.h
+
+# служебное
+*.log
+*.pdb
+test-data/
+test-data-run/
+install-gui-test/
+e2e/
+portable-test/
+cmp_*.png
+preview16.png
+preview24.png
