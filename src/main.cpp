@@ -20,6 +20,13 @@
 #include <QMenu>
 #include <QAction>
 #include <QTimer>
+#include <QFrame>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QMouseEvent>
+#include <QContextMenuEvent>
+#include <QScreen>
+#include <QWindow>
 #include <QIcon>
 #include <QPixmap>
 #include <QImage>
@@ -434,6 +441,167 @@ QString shortNumber(const QString &value)
 } // namespace
 
 // ---------------------------------------------------------------------------
+// Виджет «часы»: плавающая плашка с балансом. Размер цифр не ограничен слотом
+// трея (16×16), поэтому здесь они заметно крупнее.
+// ---------------------------------------------------------------------------
+class BalanceWidget : public QFrame
+{
+    Q_OBJECT
+public:
+    explicit BalanceWidget(QWidget *parent = nullptr);
+
+    void setMenu(QMenu *menu) { m_menu = menu; }
+    void setBalance(const QString &value, const QString &caption, bool problem);
+    void restorePosition();
+    void placeNearClock();
+
+signals:
+    void refreshRequested();
+    void positionMoved(const QPoint &pos);
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    QLabel *m_value = nullptr;
+    QLabel *m_caption = nullptr;
+    QMenu *m_menu = nullptr;
+    QColor m_plate = QColor(18, 18, 22, 235);
+    QPoint m_pressGlobal;
+    QPoint m_pressWindow;
+    bool m_dragging = false;
+};
+
+BalanceWidget::BalanceWidget(QWidget *parent)
+    : QFrame(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
+{
+    setObjectName(QStringLiteral("balanceWidget"));
+    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_StyledBackground, true);
+    setAttribute(Qt::WA_ShowWithoutActivating);
+    setWindowFlag(Qt::WindowDoesNotAcceptFocus, true);
+    setWindowTitle(QStringLiteral("DeepSeekTray"));
+
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(15, 6, 15, 8);
+    layout->setSpacing(0);
+
+    m_value = new QLabel(this);
+    m_value->setObjectName(QStringLiteral("value"));
+    m_value->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    m_caption = new QLabel(this);
+    m_caption->setObjectName(QStringLiteral("caption"));
+    m_caption->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    layout->addWidget(m_value);
+    layout->addWidget(m_caption);
+
+    setFixedSize(132, 58);
+    setBalance(QStringLiteral("—"), QStringLiteral("DeepSeek"), false);
+}
+
+void BalanceWidget::setBalance(const QString &value, const QString &caption, bool problem)
+{
+    if (m_value->text() != value)
+        m_value->setText(value);
+    if (m_caption->text() != caption)
+        m_caption->setText(caption);
+
+    m_plate = problem ? QColor(122, 28, 28, 235) : QColor(18, 18, 22, 235);
+
+    const QString sheet =
+        QStringLiteral("QLabel#value { color: #ffffff; font-size: 24px; font-weight: bold; }"
+                       "QLabel#caption { color: #9aa0a6; font-size: 11px; }");
+    if (styleSheet() != sheet)
+        setStyleSheet(sheet);
+
+    update();
+}
+
+void BalanceWidget::paintEvent(QPaintEvent *)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    const QRectF plate = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    painter.setPen(QPen(QColor(255, 255, 255, 30), 1));
+    painter.setBrush(m_plate);
+    painter.drawRoundedRect(plate, 10, 10);
+}
+
+void BalanceWidget::placeNearClock()
+{
+    const QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen)
+        return;
+    const QRect avail = screen->availableGeometry();
+    move(avail.right() - width() - 12, avail.bottom() - height() - 12);
+}
+
+void BalanceWidget::restorePosition()
+{
+    QSettings cfg(QSettings::IniFormat, QSettings::UserScope,
+                  QStringLiteral("DeepSeekTray"), QStringLiteral("config"));
+    const int x = cfg.value(QStringLiteral("ui/widgetX"), -1).toInt();
+    const int y = cfg.value(QStringLiteral("ui/widgetY"), -1).toInt();
+    if (x >= 0 && y >= 0) {
+        const QPoint saved(x, y);
+        for (const QScreen *screen : QGuiApplication::screens()) {
+            if (screen->availableGeometry().adjusted(-30, -30, 30, 30).contains(saved)) {
+                move(saved);
+                return;
+            }
+        }
+    }
+    placeNearClock();
+}
+
+void BalanceWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        m_pressGlobal = event->globalPos();
+        m_pressWindow = pos();
+        m_dragging = false;
+    }
+    QFrame::mousePressEvent(event);
+}
+
+void BalanceWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    if (event->buttons() & Qt::LeftButton) {
+        const QPoint delta = event->globalPos() - m_pressGlobal;
+        if (!m_dragging && delta.manhattanLength() > 3)
+            m_dragging = true;
+        if (m_dragging)
+            move(m_pressWindow + delta);
+    }
+    QFrame::mouseMoveEvent(event);
+}
+
+void BalanceWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (m_dragging)
+            emit positionMoved(pos());
+        else
+            emit refreshRequested();
+        m_dragging = false;
+    }
+    QFrame::mouseReleaseEvent(event);
+}
+
+void BalanceWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    if (m_menu)
+        m_menu->popup(event->globalPos());
+    event->accept();
+}
+
+// ---------------------------------------------------------------------------
 class TrayApp : public QObject
 {
     Q_OBJECT
@@ -451,6 +619,8 @@ private:
     QSystemTrayIcon m_tray;
     QMenu m_menu;
     QAction *m_actRefresh = nullptr;
+    QAction *m_actWidget = nullptr;
+    BalanceWidget *m_widget = nullptr;
     QTimer m_timer;
     QString m_key;
     QString m_url;
@@ -475,9 +645,38 @@ TrayApp::TrayApp(QObject *parent)
         QDesktopServices::openUrl(QUrl(kUsageUrl));
     });
 
+    QSettings uiCfg(QSettings::IniFormat, QSettings::UserScope,
+                    QStringLiteral("DeepSeekTray"), QStringLiteral("config"));
+    const bool widgetVisible = uiCfg.value(QStringLiteral("ui/widgetVisible"), true).toBool();
+
+    m_actWidget = m_menu.addAction(QStringLiteral("Виджет у часов"));
+    m_actWidget->setCheckable(true);
+    m_actWidget->setChecked(widgetVisible);
+
     m_menu.addSeparator();
     QAction *actQuit = m_menu.addAction(QStringLiteral("Выход"));
     connect(actQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+
+    m_widget = new BalanceWidget();
+    m_widget->setMenu(&m_menu);
+    connect(m_widget, &BalanceWidget::refreshRequested, this, &TrayApp::refresh);
+    connect(m_widget, &BalanceWidget::positionMoved, this, [](const QPoint &pos) {
+        QSettings cfg(QSettings::IniFormat, QSettings::UserScope,
+                      QStringLiteral("DeepSeekTray"), QStringLiteral("config"));
+        cfg.setValue(QStringLiteral("ui/widgetX"), pos.x());
+        cfg.setValue(QStringLiteral("ui/widgetY"), pos.y());
+    });
+    connect(m_actWidget, &QAction::toggled, this, [this](bool on) {
+        QSettings cfg(QSettings::IniFormat, QSettings::UserScope,
+                      QStringLiteral("DeepSeekTray"), QStringLiteral("config"));
+        cfg.setValue(QStringLiteral("ui/widgetVisible"), on);
+        if (on) {
+            m_widget->restorePosition();
+            m_widget->show();
+        } else {
+            m_widget->hide();
+        }
+    });
 
     connect(&m_tray, &QSystemTrayIcon::activated, this,
             [this](QSystemTrayIcon::ActivationReason reason) {
@@ -494,6 +693,10 @@ TrayApp::TrayApp(QObject *parent)
 void TrayApp::start()
 {
     m_tray.show();
+    if (m_widget && m_actWidget && m_actWidget->isChecked()) {
+        m_widget->restorePosition();
+        m_widget->show();
+    }
     if (m_key.isEmpty())
         logLine(QStringLiteral("WARN: API key not found"));
     refresh();
@@ -573,6 +776,21 @@ void TrayApp::updateUi()
     m_tray.setToolTip(tip);
     if (m_actRefresh)
         m_actRefresh->setEnabled(!m_fetching);
+
+    if (m_widget) {
+        QString value = QStringLiteral("—");
+        QString caption = QStringLiteral("DeepSeek");
+        if (m_last.ok && !m_last.infos.isEmpty()) {
+            const BalanceInfo &primary = m_last.infos.first();
+            value = primary.total;
+            caption = primary.currency;
+            if (m_updatedAt.isValid())
+                caption += QStringLiteral(" · ") + m_updatedAt.toString(QStringLiteral("HH:mm"));
+        } else if (!m_last.ok) {
+            caption = QStringLiteral("нет связи");
+        }
+        m_widget->setBalance(value, caption, problem);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -628,6 +846,36 @@ static int runRender(int argc, char **argv)
             pm.save(QStringLiteral("%1/%2_%3.png").arg(dir, s.name).arg(size));
         }
     }
+
+    // Виджет: обычное состояние и состояние ошибки, с прозрачностью и на подложке.
+    const struct { const char *name; const char *value; const char *caption; bool problem; } widgets[] = {
+        {"widget_normal", "44.10", "CNY \xc2\xb7 23:52", false},
+        {"widget_problem", "\xe2\x80\x94", "\xd0\xbd\xd0\xb5\xd1\x82 \xd1\x81\xd0\xb2\xd1\x8f\xd0\xb7\xd0\xb8", true},
+    };
+    for (const auto &spec : widgets) {
+        BalanceWidget widget;
+        widget.setBalance(QString::fromUtf8(spec.value), QString::fromUtf8(spec.caption), spec.problem);
+        widget.ensurePolished();
+        widget.show();
+        QApplication::processEvents();
+
+        QPixmap shot(widget.size());
+        shot.fill(Qt::transparent);
+        widget.render(&shot);
+
+        const int scale = 3;
+        const QImage scaled = shot.toImage().scaled(widget.width() * scale, widget.height() * scale,
+                                                    Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        scaled.save(QStringLiteral("%1/%2.png").arg(dir, QLatin1String(spec.name)));
+
+        QImage canvas(scaled.size(), QImage::Format_ARGB32);
+        canvas.fill(QColor(58, 62, 68));
+        QPainter painter(&canvas);
+        painter.drawImage(0, 0, scaled);
+        painter.end();
+        canvas.save(QStringLiteral("%1/%2_on_bg.png").arg(dir, QLatin1String(spec.name)));
+    }
+
     std::printf("rendered to %s\n", qPrintable(dir));
     return 0;
 }
@@ -659,7 +907,8 @@ int main(int argc, char **argv)
         return 3;
     }
 
-    QSharedMemory guard(QStringLiteral("DeepSeekTray.SingleInstance"));
+    const QString instanceKey = qEnvironmentVariable("DSBAL_INSTANCE", QStringLiteral("DeepSeekTray.SingleInstance"));
+    QSharedMemory guard(instanceKey);
     if (!guard.create(1)) {
         logLine(QStringLiteral("already running, exiting"));
         return 0;
