@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
     Полная сборка: приложение -> dist (Qt DLL) -> Uninstall.exe -> DeepSeekTraySetup.exe.
     Требуется: Qt 5.15.2 (msvc2022), Visual Studio 2022, Python 3 (генератор payload).
@@ -28,5 +28,13 @@ if ($LASTEXITCODE -ne 0) { throw 'windeployqt не удался.' }
 & (Join-Path $root 'installer\build-installer.bat')
 if ($LASTEXITCODE -ne 0) { throw 'Сборка установщика не удалась.' }
 
+$zip = Join-Path $dist 'DeepSeekTray-portable.zip'
+Remove-Item $zip -Force -ErrorAction SilentlyContinue
+$payload = Get-ChildItem $dist -Recurse -File |
+    Where-Object { $_.Name -ne 'DeepSeekTraySetup.exe' -and $_.Extension -ne '.zip' }
+Compress-Archive -Path $payload.FullName -DestinationPath $zip -CompressionLevel Optimal
+
 $sizeMb = [math]::Round(((Get-ChildItem $dist -Recurse | Measure-Object Length -Sum).Sum / 1MB), 1)
-Write-Host "Готово: $dist ($sizeMb МБ), установщик dist\DeepSeekTraySetup.exe"
+Write-Host "Готово: $dist ($sizeMb МБ)"
+Write-Host "  dist\DeepSeekTraySetup.exe"
+Write-Host "  dist\DeepSeekTray-portable.zip"

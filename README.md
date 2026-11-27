@@ -13,7 +13,7 @@
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white">
   <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
-  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-6e7781">
+  <img alt="Version 0.3.0" src="https://img.shields.io/badge/version-0.3.0-6e7781">
 </p>
 
 ---
@@ -30,22 +30,16 @@
 
 ## Установка
 
-Готовых релизов пока нет — проект собирается одной командой.
-
-```powershell
-git clone https://github.com/immosin/deepseek-tray.git
-cd deepseek-tray
-powershell -ExecutionPolicy Bypass -File scripts\build-and-deploy.ps1
-```
-
-На выходе:
+Скачайте последнюю сборку со страницы [Releases](https://github.com/immosin/deepseek-tray/releases/latest):
 
 | Файл | Что это |
 | --- | --- |
-| `dist\DeepSeekTraySetup.exe` | установщик, права администратора не нужны |
-| `dist\DeepSeekTray-portable.zip` | портативная сборка: распаковать и запустить `DeepSeekTray.exe` |
+| `DeepSeekTraySetup.exe` | установщик, права администратора не нужны |
+| `DeepSeekTray-portable.zip` | портативная сборка: распаковать и запустить `DeepSeekTray.exe` |
 
-Удаление — через «Параметры → Приложения» или `Uninstall.exe` в папке установки.
+![Установщик](docs/installer.png)
+
+Удаление — «Параметры → Приложения» или `Uninstall.exe` в папке установки.
 
 ## Использование
 
@@ -67,6 +61,12 @@ key=sk-...
 
 Нужны Windows 10/11 x64, Qt 5.15.2 (msvc2022), Visual Studio 2022 и Python 3.
 
+```powershell
+git clone https://github.com/immosin/deepseek-tray.git
+cd deepseek-tray
+powershell -ExecutionPolicy Bypass -File scripts\build-and-deploy.ps1
+```
+
 | Скрипт | Что делает |
 | --- | --- |
 | `build-qmake.bat` | `qmake` + `nmake`, релизная сборка приложения |
@@ -79,14 +79,12 @@ key=sk-...
 ## Структура
 
 ```text
-src/main.cpp        приложение: WinHTTP, трей, виджет, отрисовка иконки
+src/main.cpp        приложение: трей, виджет, отрисовка иконки, HTTP
 installer/          установщик и деинсталлятор на Win32
 scripts/            сборка и упаковка
 tests/              mock API и проверки
 docs/               изображения для README
 ```
-
-HTTPS выполняется через WinHTTP, а не `QNetworkAccessManager`: установленный Qt 5.15.2 собран без OpenSSL, и `https` в нём недоступен. WinHTTP не требует дополнительных DLL.
 
 ## Лицензия
 

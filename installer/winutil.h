@@ -288,7 +288,7 @@ inline bool WriteUninstallKey(const std::wstring &dir)
     };
 
     setStr(L"DisplayName", L"DeepSeekTray");
-    setStr(L"DisplayVersion", L"0.1.0");
+    setStr(L"DisplayVersion", L"0.3.0");
     setStr(L"Publisher", L"DeepSeekTray");
     setStr(L"InstallLocation", dir);
     setStr(L"DisplayIcon", dir + L"\\DeepSeekTray.exe");
