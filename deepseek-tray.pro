@@ -17,5 +17,7 @@ HEADERS += src/appdirs.h \
            src/provider.h \
            src/settings.h
 
+RC_FILE = src/app.rc
+
 LIBS += -lwinhttp
 QMAKE_CXXFLAGS += /utf-8

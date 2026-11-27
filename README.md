@@ -13,7 +13,7 @@
   <img alt="Platform Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
   <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
-  <img alt="Version 0.4.0" src="https://img.shields.io/badge/version-0.4.1-6e7781">
+  <img alt="Version 0.4.2" src="https://img.shields.io/badge/version-0.4.2-6e7781">
 </p>
 
 ---
