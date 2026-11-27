@@ -24,3 +24,5 @@ cmp_*.png
 preview16.png
 preview24.png
 widget-test-data/
+icons-preview/
+preview*.png

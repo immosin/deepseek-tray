@@ -1,114 +1,93 @@
-# DeepSeekTray
+<div align="center">
+  <img src="docs/hero.png" width="840" alt="DeepSeekTray">
+</div>
 
-Баланс DeepSeek API в системном трее Windows: цифра прямо на иконке, подробности — в тултипе.
+<h1 align="center">DeepSeekTray</h1>
 
-![Иконка](icons-preview/normal_44_64.png)
+<p align="center">
+  Баланс DeepSeek API в системном трее Windows —<br>
+  цифра на иконке и крупная плашка рядом с часами.
+</p>
+
+<p align="center">
+  <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white">
+  <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
+  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-6e7781">
+</p>
+
+---
+
+## Возможности
+
+- **Иконка в трее.** Остаток цифрами (`44`, `2.2`, `1.5k`), красная — если API недоступен или баланс исчерпан.
+- **Виджет у часов.** Плашка с цифрами 24 px: перетаскивается, позиция запоминается, включается галочкой в меню.
+- **Детали в тултипе.** Суммы по валютам, время последнего обновления.
+- **Опрос раз в 5 минут**, после ошибки — повтор через минуту; последний ответ кэшируется.
+- Один экземпляр на сеанс, поддержка высокого DPI, никаких зависимостей во время работы.
+
+![Виджет](docs/widget.png)
 
 ## Установка
 
-Один файл — `dist\DeepSeekTraySetup.exe` (25 МБ), права администратора не нужны:
-
-1. Запустить `DeepSeekTraySetup.exe`.
-2. При необходимости изменить папку (по умолчанию `%LOCALAPPDATA%\DeepSeekTray`), снять галочки автозапуска/запуска.
-3. «Установить».
-
-![Установщик](installer-preview.png)
-
-Что делает установщик:
-
-- распаковывает приложение и Qt-библиотеки;
-- создаёт ярлык в меню «Пуск» и (по галочке) в автозапуске;
-- добавляет запись в «Программы и компоненты»;
-- останавливает запущенный экземпляр перед обновлением;
-- запускает приложение.
-
-Удаление: «Параметры → Приложения → DeepSeekTray», либо `%LOCALAPPDATA%\DeepSeekTray\Uninstall.exe`. Логи и настройки остаются в `%APPDATA%\DeepSeekTray`.
-
-Если папка по умолчанию недоступна (например, установщик запущен из ограниченной среды), установщик покажет код ошибки и попробует `%LOCALAPPDATA%\Programs\DeepSeekTray`, `%APPDATA%\DeepSeekTray`, `C:\Users\Public\Documents\DeepSeekTray`; папку можно выбрать и вручную. Подробности пишутся в `%TEMP%\DeepSeekTraySetup.log`.
-
-### Тихая установка
-
-```bat
-DeepSeekTraySetup.exe /S /dir="D:\Tools\DeepSeekTray" /log="%TEMP%\ds-setup.log"
-Uninstall.exe /S
-```
-
-Ключи: `/S` — без окон, `/dir=<путь>`, `/startup=<папка>`, `/log=<файл>`, `/ns` — без ярлыков, `/nr` — без записи в реестре, `/nl` — не запускать, `/noautostart`, `/nolaunch`.
-
-## Что делает приложение
-
-- Опрашивает `GET https://api.deepseek.com/user/balance` раз в 5 минут (после ошибки — повтор через минуту).
-- Рисует на иконке остаток в основной валюте (`44`, `2.2`, `1.5k`); красная «таблетка» — если API недоступен или баланс исчерпан.
-- Тултип: суммы по всем валютам и время последнего обновления.
-- Меню по правому клику: **Обновить**, **Открыть platform.deepseek.com**, **Выход**. Левый клик — обновить немедленно.
-- Лог и кэш последнего ответа: `%APPDATA%\DeepSeekTray\` (`tray.log`, `last-balance.json`).
-- Один экземпляр на сеанс, поддержка высокого DPI.
-
-## Виджет у часов
-
-Плавающая плашка с балансом крупными цифрами (24 px) — размер не ограничен слотом трея 16×16.
-
-![Виджет](icons-preview/widget_normal_on_bg.png)
-
-- Включается и выключается в меню иконки: **Виджет у часов**.
-- Перетаскивается мышью в любое место; позиция запоминается (`ui/widgetX`, `ui/widgetY` в `config.ini`).
-- По умолчанию появляется в правом нижнем углу, над панелью задач.
-- Левый клик — обновить баланс, правый — то же меню, что у иконки.
-- Всегда поверх окон, не занимает место на панели задач и не попадает в Alt+Tab.
-
-## Ключ API
-
-Ищется по порядку:
-
-1. переменная окружения `DEEPSEEK_API_KEY`;
-2. `%APPDATA%\DeepSeekTray\config.ini`:
-   ```ini
-   [api]
-   key=sk-...
-   ```
-3. профиль DSH: `~/.dsh/.credentials.yaml`, строка `DEEPSEEK_API_KEY: sk-...`.
-
-## Проверка без трея
+Готовых релизов пока нет — проект собирается одной командой.
 
 ```powershell
-dist\DeepSeekTray.exe --check
-dist\DeepSeekTray.exe --check --url http://127.0.0.1:8765/user/balance   # локальный mock
-dist\DeepSeekTray.exe --render .\icons                                  # PNG иконок 16/24/32/64
-powershell -ExecutionPolicy Bypass -File tests\run-tests.ps1            # mock 200/401/500
-```
-
-Коды возврата `--check`: `0` — успех, `4` — 401 (ключ не принят), `1` — прочие ошибки.
-
-## Сборка
-
-Требуется: Windows 10/11 x64, Qt 5.15.2 (msvc2022) в `C:\Qt\5.15.2\msvc2022`, Visual Studio 2022, Python 3.
-
-```powershell
+git clone https://github.com/immosin/deepseek-tray.git
+cd deepseek-tray
 powershell -ExecutionPolicy Bypass -File scripts\build-and-deploy.ps1
 ```
 
-Скрипт собирает приложение через `qmake`/`nmake` (`build-qmake.bat`), раскладывает Qt-зависимости `windeployqt` в `dist`, затем вызывает `installer\build-installer.bat`, который собирает `Uninstall.exe` и `DeepSeekTraySetup.exe` с встроенным payload.
+На выходе:
 
-Только установщик (если `dist` уже готов): `installer\build-installer.bat`.
+| Файл | Что это |
+| --- | --- |
+| `dist\DeepSeekTraySetup.exe` | установщик, права администратора не нужны |
+| `dist\DeepSeekTray-portable.zip` | портативная сборка: распаковать и запустить `DeepSeekTray.exe` |
 
-## Устройство
+Удаление — через «Параметры → Приложения» или `Uninstall.exe` в папке установки.
 
-- `src/main.cpp` — трей-приложение: `httpGet()` (синхронный WinHTTP), разбор JSON, `renderIcon()` (`QPainter`), `TrayApp` (`QSystemTrayIcon`, меню, `QTimer`, запрос в `QThreadPool` с возвратом в GUI-поток).
-- `installer/installer.cpp` — установщик на Win32: GUI, распаковка ресурсов, ярлыки (`IShellLink`), ключ удаления.
-- `installer/uninstall.cpp` — удаление: остановка приложения, ярлыки, реестр, очистка папки через `cmd` после выхода.
-- `installer/gen_payload.py` — генерирует `payload.rc` и `payload_index.h` из `dist`.
+## Использование
 
-Почему WinHTTP, а не `QNetworkAccessManager`: установленный Qt 5.15.2 собран без OpenSSL (`QSslSocket` отсутствует, схема `https` не поддерживается), поэтому HTTPS в нём недоступен. WinHTTP не требует дополнительных DLL.
+После запуска в трее появляется иконка с балансом. Правый клик — меню:
 
-## Известные ограничения
+- **Обновить** — запросить баланс сейчас;
+- **Виджет у часов** — плашка с крупными цифрами;
+- **Открыть platform.deepseek.com** — расход и пополнение;
+- **Выход**.
 
-- Windows 10 по умолчанию прячет новые значки в «переполнение» (`^`): Параметры → Персонализация → Панель задач → «Выберите, какие значки отображать» → включить DeepSeekTray.
-- В среде DSH (ограниченный токен) недоступны Windows TLS и запись в `HKCU`/`%APPDATA%`, поэтому реальный запрос к API и запись в реестр проверялись вне её: приложение — на локальном mock, установщик — с ключами `/nr` и `/dir`.
-- Прокси: системная настройка (AUTOMATIC_PROXY с откатом на DEFAULT_PROXY), таймауты 5/5/10/15 с.
+Ключ API берётся по порядку: переменная `DEEPSEEK_API_KEY` → `%APPDATA%\DeepSeekTray\config.ini` → профиль DSH (`~/.dsh/.credentials.yaml`).
 
-## Что дальше
+```ini
+[api]
+key=sk-...
+```
 
-- выбор валюты (CNY/USD) и формата цифры;
-- уведомление при падении баланса ниже порога;
-- окно настроек (интервал, порог, ключ) вместо INI;
-- иконка для exe/ярлыка и подпись установщика.
+## Сборка
+
+Нужны Windows 10/11 x64, Qt 5.15.2 (msvc2022), Visual Studio 2022 и Python 3.
+
+| Скрипт | Что делает |
+| --- | --- |
+| `build-qmake.bat` | `qmake` + `nmake`, релизная сборка приложения |
+| `scripts\build-and-deploy.ps1` | всё сразу: приложение, `windeployqt`, установщик и zip |
+| `installer\build-installer.bat` | только `Uninstall.exe` и `DeepSeekTraySetup.exe` |
+| `tests\run-tests.ps1` | проверки запросов и разбора JSON на локальном mock |
+
+Проверка без трея: `DeepSeekTray.exe --check`, отрисовка иконок: `--render <папка>`.
+
+## Структура
+
+```text
+src/main.cpp        приложение: WinHTTP, трей, виджет, отрисовка иконки
+installer/          установщик и деинсталлятор на Win32
+scripts/            сборка и упаковка
+tests/              mock API и проверки
+docs/               изображения для README
+```
+
+HTTPS выполняется через WinHTTP, а не `QNetworkAccessManager`: установленный Qt 5.15.2 собран без OpenSSL, и `https` в нём недоступен. WinHTTP не требует дополнительных DLL.
+
+## Лицензия
+
+MIT — см. [LICENSE](LICENSE).
