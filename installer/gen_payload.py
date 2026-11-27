@@ -24,7 +24,7 @@ def main() -> int:
             # страховка: не затягивать вложенную установку в payload
             if first == "deepseektray":
                 continue
-            if rel.lower() in skip or rel.lower().endswith(".pdb"):
+            if rel.lower() in skip or rel.lower().endswith(".pdb") or rel.lower().endswith(".zip") or rel.lower().endswith(".tmp"):
                 continue
             files.append((rel, full))
     files.sort(key=lambda item: item[0].lower())

@@ -31,6 +31,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QSet>
+#include <QHash>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -352,7 +353,7 @@ private:
     AppSettings m_settings;
     QVector<ProviderSnapshot> m_snapshots;
     QDateTime m_updatedAt;
-    QDateTime m_lastNotify;
+    QHash<QString, QDateTime> m_lastNotify; // provider/currency -> время уведомления
     bool m_fetching = false;
 };
 
@@ -593,37 +594,66 @@ QString TrayApp::iconText() const
     return shortNumber(info->total);
 }
 
+namespace {
+
+// Порог для валюты: свой в [thresholds.<id>], иначе default=, иначе общий из [settings].
+// Если у провайдера заданы только конкретные валюты, остальные не контролируются.
+double thresholdFor(const ProviderSettings &provider, const QString &currency, double global)
+{
+    const QString code = currency.toUpper();
+    if (provider.thresholds.contains(code))
+        return provider.thresholds.value(code);
+    if (provider.thresholds.contains(QStringLiteral("default")))
+        return provider.thresholds.value(QStringLiteral("default"));
+    if (!provider.thresholds.isEmpty())
+        return 0.0;
+    return global;
+}
+
+} // namespace
+
 void TrayApp::maybeNotify()
 {
-    const ProviderSettings *provider = activeProvider(m_settings);
-    const ProviderSnapshot *active = activeSnapshot();
-    if (!provider || !active || !active->result.ok)
-        return;
+    const QDateTime now = QDateTime::currentDateTime();
+    const double global = m_settings.general.lowBalanceThreshold;
 
-    const BalanceInfo *info = pickInfo(active->result, m_settings.general.currency);
-    if (!info)
-        return;
+    for (const ProviderSnapshot &snapshot : m_snapshots) {
+        if (!snapshot.result.ok)
+            continue;
 
-    bool ok = false;
-    const double value = info->total.toDouble(&ok);
-    if (!ok)
-        return;
+        for (const BalanceInfo &info : snapshot.result.infos) {
+            bool ok = false;
+            const double value = info.total.toDouble(&ok);
+            if (!ok)
+                continue;
 
-    const double threshold = m_settings.general.lowBalanceThreshold;
-    if (threshold <= 0)
-        return;
+            const QString currency = info.currency.toUpper();
+            const double threshold = thresholdFor(snapshot.provider, currency, global);
+            const QString key = snapshot.provider.id + QLatin1Char('/') + currency;
 
-    if (value > threshold) {
-        m_lastNotify = QDateTime();
-        return;
+            if (threshold <= 0 || value > threshold) {
+                m_lastNotify.remove(key);
+                continue;
+            }
+            if (m_lastNotify.contains(key) &&
+                m_lastNotify.value(key).secsTo(now) < 6 * 3600)
+                continue;
+
+            m_lastNotify.insert(key, now);
+            logLine(QStringLiteral("notify: %1 %2 %3 <= %4")
+                        .arg(snapshot.provider.id)
+                        .arg(info.total)
+                        .arg(currency)
+                        .arg(threshold));
+            m_tray.showMessage(QStringLiteral("Низкий баланс"),
+                               QStringLiteral("%1: %2 %3 (порог %4)")
+                                   .arg(snapshot.provider.title)
+                                   .arg(info.total)
+                                   .arg(info.currency)
+                                   .arg(threshold),
+                               QSystemTrayIcon::Warning, 8000);
+        }
     }
-    if (m_lastNotify.isValid() && m_lastNotify.secsTo(QDateTime::currentDateTime()) < 6 * 3600)
-        return;
-
-    m_lastNotify = QDateTime::currentDateTime();
-    m_tray.showMessage(QStringLiteral("Низкий баланс"),
-                       QStringLiteral("%1: %2 %3").arg(provider->title, info->total, info->currency),
-                       QSystemTrayIcon::Warning, 8000);
 }
 
 // ---------------------------------------------------------------------------

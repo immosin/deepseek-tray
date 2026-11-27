@@ -44,6 +44,12 @@ QString configTemplate(const QString &key)
                "key=%1\n"
                "enabled=true\n"
                "\n"
+               "; Пороги уведомлений по валютам: секция [thresholds.<id провайдера>].\n"
+               "; default= задаёт порог для всех валют провайдера.\n"
+               "[thresholds.deepseek]\n"
+               "CNY=10\n"
+               "USD=1\n"
+               "\n"
                "; Второй источник — появится вместе с поддержкой Kimi:\n"
                "; [providers.kimi]\n"
                "; type=moonshot\n"
@@ -176,6 +182,23 @@ AppSettings loadSettings()
         provider.key = cfg.value(QStringLiteral("key")).toString().trimmed();
         provider.enabled = cfg.value(QStringLiteral("enabled"), true).toBool();
         cfg.endGroup();
+
+        const QString thresholdsGroup = QStringLiteral("thresholds.") + provider.id;
+        if (cfg.childGroups().contains(thresholdsGroup)) {
+            cfg.beginGroup(thresholdsGroup);
+            const QStringList thresholdKeys = cfg.childKeys();
+            for (const QString &key : thresholdKeys) {
+                bool ok = false;
+                const double value = cfg.value(key).toDouble(&ok);
+                if (!ok)
+                    continue;
+                const QString name = key.trimmed().compare(QLatin1String("default"), Qt::CaseInsensitive) == 0
+                                         ? QStringLiteral("default")
+                                         : key.trimmed().toUpper();
+                provider.thresholds.insert(name, value);
+            }
+            cfg.endGroup();
+        }
 
         settings.providers.append(provider);
     }

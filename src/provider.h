@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QString>
 #include <QVector>
 
@@ -28,6 +29,9 @@ struct ProviderSettings {
     QString key;
     QString console; // ссылка «личный кабинет»
     bool enabled = true;
+    // Пороги уведомлений по валютам: "CNY" -> 10, "USD" -> 1.
+    // Особый ключ "default" задаёт порог для всех валют провайдера.
+    QHash<QString, double> thresholds;
 };
 
 struct ProviderSnapshot {

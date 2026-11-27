@@ -13,7 +13,7 @@
   <img alt="Platform Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
   <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
-  <img alt="Version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-6e7781">
+  <img alt="Version 0.4.0" src="https://img.shields.io/badge/version-0.4.1-6e7781">
 </p>
 
 ---
@@ -65,7 +65,7 @@ DeepSeekTray держит остаток на виду: цифра в трее �
 ```ini
 [settings]
 refresh_minutes=5          ; период опроса, минуты (1–1440)
-low_balance_threshold=10   ; уведомление ниже этого остатка (0 — выключить)
+low_balance_threshold=10   ; общий порог уведомления (0 — выключить)
 currency=auto              ; auto, CNY или USD
 provider=deepseek          ; id активного источника
 
@@ -76,9 +76,16 @@ url=https://api.deepseek.com/user/balance
 console=https://platform.deepseek.com/usage
 key=                       ; пусто — ключ возьмётся из DEEPSEEK_API_KEY или профиля DSH
 enabled=true
+
+; свои пороги по валютам — для каждого провайдера отдельная секция
+[thresholds.deepseek]
+CNY=10
+USD=1
 ```
 
 Провайдеров может быть несколько: добавьте ещё одну секцию `[providers.<id>]` и укажите её id в `provider=`. Сейчас поддержан тип `deepseek`; Kimi — в планах.
+
+Порог уведомления ищется по цепочке: ключ валюты в `[thresholds.<id>]` → `default=` в той же секции → общий `low_balance_threshold`. Если у провайдера заданы только отдельные валюты, остальные не контролируются; `0` отключает уведомления для этой валюты.
 
 ## Сборка
 
