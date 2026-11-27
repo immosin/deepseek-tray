@@ -13,7 +13,7 @@
   <img alt="Platform Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
   <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
-  <img alt="Version 0.3.0" src="https://img.shields.io/badge/version-0.3.0-6e7781">
+  <img alt="Version 0.4.0" src="https://img.shields.io/badge/version-0.4.0-6e7781">
 </p>
 
 ---
@@ -28,9 +28,10 @@ DeepSeekTray держит остаток на виду: цифра в трее �
 
 - **Иконка в трее.** Остаток цифрами (`44`, `2.2`, `1.5k`), красная — если API недоступен или баланс исчерпан.
 - **Виджет у часов.** Плашка с цифрами 24 px: перетаскивается, позиция запоминается, включается галочкой в меню.
-- **Детали в тултипе.** Суммы по валютам, время последнего обновления.
-- **Опрос раз в 5 минут**, после ошибки — повтор через минуту; последний ответ кэшируется.
-- Один экземпляр на сеанс, поддержка высокого DPI, никаких зависимостей во время работы.
+- **Несколько источников.** Провайдеры описываются секциями `[providers.*]`; активный выбирается в настройках.
+- **Уведомление о низком балансе.** Когда остаток опускается ниже порога — всплывает сообщение в трее.
+- **Настройки на ходу.** Частота опроса, порог, валюта и активный API — в `config.ini`, перечитывается без перезапуска.
+- **Детали в тултипе.** Суммы по валютам всех включённых провайдеров и время обновления.
 
 ![Виджет](docs/widget.png)
 
@@ -49,19 +50,35 @@ DeepSeekTray держит остаток на виду: цифра в трее �
 
 ## Использование
 
-После запуска в трее появляется иконка с балансом. Правый клик — меню:
+Правый клик по иконке — меню:
 
 - **Обновить** — запросить баланс сейчас;
+- **Открыть настройки** — `%APPDATA%\DeepSeekTray\config.ini` в блокноте;
 - **Виджет у часов** — плашка с крупными цифрами;
-- **Открыть platform.deepseek.com** — расход и пополнение;
+- **Личный кабинет** — расход и пополнение у активного провайдера;
 - **Выход**.
 
-Ключ API берётся по порядку: переменная `DEEPSEEK_API_KEY` → `%APPDATA%\DeepSeekTray\config.ini` → профиль DSH (`~/.dsh/.credentials.yaml`).
+## Настройки
+
+Файл `%APPDATA%\DeepSeekTray\config.ini` открывается из меню и перечитывается перед каждым обновлением — перезапуск не нужен.
 
 ```ini
-[api]
-key=sk-...
+[settings]
+refresh_minutes=5          ; период опроса, минуты (1–1440)
+low_balance_threshold=10   ; уведомление ниже этого остатка (0 — выключить)
+currency=auto              ; auto, CNY или USD
+provider=deepseek          ; id активного источника
+
+[providers.deepseek]
+type=deepseek
+title=DeepSeek
+url=https://api.deepseek.com/user/balance
+console=https://platform.deepseek.com/usage
+key=                       ; пусто — ключ возьмётся из DEEPSEEK_API_KEY или профиля DSH
+enabled=true
 ```
+
+Провайдеров может быть несколько: добавьте ещё одну секцию `[providers.<id>]` и укажите её id в `provider=`. Сейчас поддержан тип `deepseek`; Kimi — в планах.
 
 ## Сборка
 
@@ -80,12 +97,16 @@ powershell -ExecutionPolicy Bypass -File scripts\build-and-deploy.ps1
 | `installer\build-installer.bat` | только `Uninstall.exe` и `DeepSeekTraySetup.exe` |
 | `tests\run-tests.ps1` | проверки запросов и разбора JSON на локальном mock |
 
-Проверка без трея: `DeepSeekTray.exe --check`, отрисовка иконок: `--render <папка>`.
+Проверка без трея: `DeepSeekTray.exe --check`, выбор источника: `--check --provider <id>`, отрисовка: `--render <папка>`.
 
 ## Структура
 
 ```text
-src/main.cpp        приложение: трей, виджет, отрисовка иконки, HTTP
+src/main.cpp        приложение: трей, виджет, отрисовка иконки
+src/provider.*      провайдеры баланса и разбор ответов API
+src/settings.*      config.ini: параметры и список источников
+src/http.*          WinHTTP-транспорт
+src/appdirs.*       пути данных и лог
 installer/          установщик и деинсталлятор на Win32
 scripts/            сборка и упаковка
 tests/              mock API и проверки
@@ -95,8 +116,8 @@ docs/               изображения для README
 ## Планы
 
 - [ ] Показывать доллары и юани одновременно — в иконке, виджете и тултипе.
-- [ ] Уведомление, когда баланс опускается ниже заданного порога.
-- [ ] Работа с API других провайдеров (OpenAI, Anthropic и т. п.) в том же интерфейсе.
+- [ ] Интеграция Kimi (Moonshot API) как второго источника баланса.
+- [ ] Другие провайдеры (OpenAI, Anthropic и т. п.) в том же интерфейсе.
 
 ## Лицензия
 

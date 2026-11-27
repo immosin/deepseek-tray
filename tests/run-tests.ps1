@@ -15,6 +15,7 @@ if (-not (Test-Path $exe)) { throw 'Сначала соберите проект
 $python = (Get-Command python).Source
 $dataDir = Join-Path $root 'test-data'
 Remove-Item $dataDir -Recurse -Force -ErrorAction SilentlyContinue
+$env:DEEPSEEK_API_KEY = "test-key"
 $env:DSBAL_DATA_DIR = $dataDir
 $env:PATH = "C:\Windows\System32;C:\Windows"
 
@@ -43,10 +44,10 @@ try {
     Invoke-Case '401 неверный ключ' 'http://127.0.0.1:8765/unauth'     4 @('401')
     Invoke-Case '500 сервер'      'http://127.0.0.1:8765/boom'         1 @('500')
 
-    if (Test-Path (Join-Path $dataDir 'last-balance.json')) {
-        Write-Host '  [ok]   last-balance.json сохранён' -ForegroundColor Green
+    if (Test-Path (Join-Path $dataDir 'last-balance-deepseek.json')) {
+        Write-Host '  [ok]   last-balance-deepseek.json сохранён' -ForegroundColor Green
     } else {
-        Write-Host '  [FAIL] last-balance.json не создан' -ForegroundColor Red
+        Write-Host '  [FAIL] last-balance-deepseek.json не создан' -ForegroundColor Red
         $failed++
     }
 }
