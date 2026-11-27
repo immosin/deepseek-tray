@@ -10,13 +10,19 @@
 </p>
 
 <p align="center">
-  <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white">
-  <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
+  <img alt="Platform Windows 10/11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6?logo=windows&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
+  <img alt="Qt 5.15" src="https://img.shields.io/badge/Qt-5.15-41CD52?logo=qt&logoColor=white">
   <img alt="Version 0.3.0" src="https://img.shields.io/badge/version-0.3.0-6e7781">
 </p>
 
 ---
+
+## Зачем это нужно
+
+Баланс DeepSeek API виден только в личном кабинете: чтобы проверить остаток, нужно открыть сайт, войти и найти нужную страницу. Когда деньги заканчиваются, запросы начинают падать с ошибкой — и это замечаешь уже по сломанному коду, а не по счёту.
+
+DeepSeekTray держит остаток на виду: цифра в трее и крупная плашка рядом с часами. Один взгляд — и понятно, хватит ли баланса на сегодняшнюю работу.
 
 ## Возможности
 
